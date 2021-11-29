@@ -24,12 +24,6 @@ pub fn build_segment_1(path: &Path) -> Segment {
     segment1.upsert_point(4, 4, &vec4).unwrap();
     segment1.upsert_point(5, 5, &vec5).unwrap();
 
-    let payload_key = "color".to_owned();
-
-    let payload_option1 = PayloadType::Keyword(vec!["red".to_owned()]);
-    let payload_option2 = PayloadType::Keyword(vec!["red".to_owned(), "blue".to_owned()]);
-    let payload_option3 = PayloadType::Keyword(vec!["blue".to_owned()]);
-
     segment1
 }
 
@@ -48,12 +42,6 @@ pub fn build_segment_2(path: &Path) -> Segment {
     segment2.upsert_point(13, 13, &vec3).unwrap();
     segment2.upsert_point(14, 14, &vec4).unwrap();
     segment2.upsert_point(15, 15, &vec5).unwrap();
-
-    let payload_key = "color".to_owned();
-
-    let payload_option1 = PayloadType::Keyword(vec!["red".to_owned()]);
-    let payload_option2 = PayloadType::Keyword(vec!["red".to_owned(), "blue".to_owned()]);
-    let payload_option3 = PayloadType::Keyword(vec!["blue".to_owned()]);
     
     segment2
 }
