@@ -1,5 +1,5 @@
 use crate::index::field_index::{CardinalityEstimation, PrimaryCondition};
-use crate::types::{Condition, Filter};
+use crate::types::{Condition};
 use itertools::Itertools;
 use std::cmp::{max, min};
 
@@ -46,43 +46,14 @@ fn estimate_condition<F>(
 where
     F: Fn(&Condition) -> CardinalityEstimation,
 {
-    match condition {
-        Condition::Filter(filter) => estimate_filter(estimator, filter, total),
-        _ => estimator(condition),
-    }
+    estimator(condition)
 }
 
-pub fn estimate_filter<F>(estimator: &F, filter: &Filter, total: usize) -> CardinalityEstimation
+pub fn estimate_filter<F>(estimator: &F, total: usize) -> CardinalityEstimation
 where
     F: Fn(&Condition) -> CardinalityEstimation,
 {
     let mut filter_estimations: Vec<CardinalityEstimation> = vec![];
-
-    match &filter.must {
-        None => {}
-        Some(conditions) => {
-            if !conditions.is_empty() {
-                filter_estimations.push(estimate_must(estimator, conditions, total))
-            }
-        }
-    }
-    match &filter.should {
-        None => {}
-        Some(conditions) => {
-            if !conditions.is_empty() {
-                filter_estimations.push(estimate_should(estimator, conditions, total))
-            }
-        }
-    }
-    match &filter.must_not {
-        None => {}
-        Some(conditions) => {
-            if !conditions.is_empty() {
-                filter_estimations.push(estimate_must_not(estimator, conditions, total))
-            }
-        }
-    }
-
     combine_must_estimations(&filter_estimations, total)
 }
 
@@ -173,7 +144,6 @@ mod tests {
 
     fn test_estimator(condition: &Condition) -> CardinalityEstimation {
         match condition {
-            Condition::Filter(_) => panic!("unexpected Filter"),
             Condition::Field(field) => match field.key.as_str() {
                 "color" => CardinalityEstimation {
                     primary_clauses: vec![PrimaryCondition::Condition(field.clone())],
@@ -210,146 +180,5 @@ mod tests {
         }
     }
 
-    #[test]
-    fn simple_query_estimation_test() {
-        let query = Filter::new_must(test_condition("color".to_owned()));
-        let estimation = estimate_filter(&test_estimator, &query, TOTAL);
-        assert_eq!(estimation.exp, 200);
-        assert!(!estimation.primary_clauses.is_empty());
-    }
 
-    #[test]
-    fn must_estimation_query_test() {
-        let query = Filter {
-            should: None,
-            must: Some(vec![
-                test_condition("color".to_owned()),
-                test_condition("size".to_owned()),
-                test_condition("un-indexed".to_owned()),
-            ]),
-            must_not: None,
-        };
-
-        let estimation = estimate_filter(&test_estimator, &query, TOTAL);
-        assert_eq!(estimation.primary_clauses.len(), 1);
-        match &estimation.primary_clauses[0] {
-            PrimaryCondition::Condition(field) => assert_eq!(&field.key, "size"),
-            PrimaryCondition::Ids(_) => assert!(false),
-        }
-        assert!(estimation.max <= TOTAL);
-        assert!(estimation.exp <= estimation.max);
-        assert!(estimation.min <= estimation.exp);
-    }
-
-    #[test]
-    fn should_estimation_query_test() {
-        let query = Filter {
-            should: Some(vec![
-                test_condition("color".to_owned()),
-                test_condition("size".to_owned()),
-            ]),
-            must: None,
-            must_not: None,
-        };
-
-        let estimation = estimate_filter(&test_estimator, &query, TOTAL);
-        assert_eq!(estimation.primary_clauses.len(), 2);
-        assert!(estimation.max <= TOTAL);
-        assert!(estimation.exp <= estimation.max);
-        assert!(estimation.min <= estimation.exp);
-    }
-
-    #[test]
-    fn another_should_estimation_query_test() {
-        let query = Filter {
-            should: Some(vec![
-                test_condition("color".to_owned()),
-                test_condition("size".to_owned()),
-                test_condition("un-indexed".to_owned()),
-            ]),
-            must: None,
-            must_not: None,
-        };
-
-        let estimation = estimate_filter(&test_estimator, &query, TOTAL);
-        assert_eq!(estimation.primary_clauses.len(), 0);
-        eprintln!("estimation = {:#?}", estimation);
-        assert!(estimation.max <= TOTAL);
-        assert!(estimation.exp <= estimation.max);
-        assert!(estimation.min <= estimation.exp);
-    }
-
-    #[test]
-    fn complex_estimation_query_test() {
-        let query = Filter {
-            should: Some(vec![
-                Condition::Filter(Filter {
-                    should: None,
-                    must: Some(vec![
-                        test_condition("color".to_owned()),
-                        test_condition("size".to_owned()),
-                    ]),
-                    must_not: None,
-                }),
-                Condition::Filter(Filter {
-                    should: None,
-                    must: Some(vec![
-                        test_condition("price".to_owned()),
-                        test_condition("size".to_owned()),
-                    ]),
-                    must_not: None,
-                }),
-            ]),
-            must: None,
-            must_not: Some(vec![Condition::HasId(HasIdCondition {
-                has_id: [1, 2, 3, 4, 5].into(),
-            })]),
-        };
-
-        let estimation = estimate_filter(&test_estimator, &query, TOTAL);
-        assert_eq!(estimation.primary_clauses.len(), 2);
-        assert!(estimation.max <= TOTAL);
-        assert!(estimation.exp <= estimation.max);
-        assert!(estimation.min <= estimation.exp);
-    }
-
-    #[test]
-    fn another_complex_estimation_query_test() {
-        let query = Filter {
-            should: None,
-            must: Some(vec![
-                Condition::Filter(Filter {
-                    must: None,
-                    should: Some(vec![
-                        test_condition("color".to_owned()),
-                        test_condition("size".to_owned()),
-                    ]),
-                    must_not: None,
-                }),
-                Condition::Filter(Filter {
-                    must: None,
-                    should: Some(vec![
-                        test_condition("price".to_owned()),
-                        test_condition("size".to_owned()),
-                    ]),
-                    must_not: None,
-                }),
-            ]),
-            must_not: Some(vec![Condition::HasId(HasIdCondition {
-                has_id: [1, 2, 3, 4, 5].into(),
-            })]),
-        };
-
-        let estimation = estimate_filter(&test_estimator, &query, TOTAL);
-        assert_eq!(estimation.primary_clauses.len(), 2);
-        estimation.primary_clauses.iter().for_each(|x| match x {
-            PrimaryCondition::Condition(field) => {
-                assert!(vec!["price".to_owned(), "size".to_owned(),].contains(&field.key))
-            }
-            PrimaryCondition::Ids(_) => assert!(false, "Should not go here"),
-        });
-        assert!(estimation.max <= TOTAL);
-        assert!(estimation.exp <= estimation.max);
-        assert!(estimation.min <= estimation.exp);
-    }
 }

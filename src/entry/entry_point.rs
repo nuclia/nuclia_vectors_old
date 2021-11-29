@@ -1,5 +1,5 @@
 use crate::types::{
-    Filter, PayloadKeyType, PayloadKeyTypeRef, PayloadType, PointIdType, ScoredPoint, SearchParams,
+    PayloadKeyType, PayloadKeyTypeRef, PayloadType, PointIdType, ScoredPoint, SearchParams,
     SegmentConfig, SegmentInfo, SegmentType, SeqNumberType, TheMap, VectorElementType, WithPayload,
 };
 use atomicwrites::Error as AtomicIoError;
@@ -95,7 +95,6 @@ pub trait SegmentEntry {
         &self,
         vector: &[VectorElementType],
         with_payload: &WithPayload,
-        filter: Option<&Filter>,
         top: usize,
         params: Option<&SearchParams>,
     ) -> OperationResult<Vec<ScoredPoint>>;
@@ -113,47 +112,7 @@ pub trait SegmentEntry {
         point_id: PointIdType,
     ) -> OperationResult<bool>;
 
-    fn set_full_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        full_payload: TheMap<PayloadKeyType, PayloadType>,
-    ) -> OperationResult<bool>;
-
-    fn set_full_payload_with_json(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        full_payload: &str,
-    ) -> OperationResult<bool>;
-
-    fn set_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        key: PayloadKeyTypeRef,
-        payload: PayloadType,
-    ) -> OperationResult<bool>;
-
-    fn delete_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        key: PayloadKeyTypeRef,
-    ) -> OperationResult<bool>;
-
-    fn clear_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-    ) -> OperationResult<bool>;
-
     fn vector(&self, point_id: PointIdType) -> OperationResult<Vec<VectorElementType>>;
-
-    fn payload(
-        &self,
-        point_id: PointIdType,
-    ) -> OperationResult<TheMap<PayloadKeyType, PayloadType>>;
 
     fn iter_points(&self) -> Box<dyn Iterator<Item = PointIdType> + '_>;
 
@@ -162,7 +121,6 @@ pub trait SegmentEntry {
         &'a self,
         offset: PointIdType,
         limit: usize,
-        filter: Option<&'a Filter>,
     ) -> Vec<PointIdType>;
 
     /// Check if there is point with `point_id` in this segment.
@@ -192,23 +150,6 @@ pub trait SegmentEntry {
 
     /// Removes all persisted data and forces to destroy segment
     fn drop_data(&mut self) -> OperationResult<()>;
-
-    /// Delete field index, if exists
-    fn delete_field_index(
-        &mut self,
-        op_num: SeqNumberType,
-        key: PayloadKeyTypeRef,
-    ) -> OperationResult<bool>;
-
-    /// Create index for a payload field, if not exists
-    fn create_field_index(
-        &mut self,
-        op_num: SeqNumberType,
-        key: PayloadKeyTypeRef,
-    ) -> OperationResult<bool>;
-
-    /// Get indexed fields
-    fn get_indexed_fields(&self) -> Vec<PayloadKeyType>;
 
     /// Checks if segment errored during last operations
     fn check_error(&self) -> Option<SegmentFailedState>;

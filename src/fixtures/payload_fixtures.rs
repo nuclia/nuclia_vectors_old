@@ -1,5 +1,5 @@
 use crate::types::{
-    Condition, FieldCondition, Filter, Match, PayloadType, Range as RangeCondition,
+    Condition, FieldCondition, Match, PayloadType, Range as RangeCondition,
     VectorElementType,
 };
 use itertools::Itertools;
@@ -89,32 +89,3 @@ pub fn random_field_condition(rnd_gen: &mut ThreadRng) -> Condition {
     }
 }
 
-pub fn random_filter(rnd_gen: &mut ThreadRng) -> Filter {
-    let mut rnd1 = rand::thread_rng();
-
-    let should_conditions = (0..=2)
-        .take_while(|_| rnd1.gen::<f64>() > 0.6)
-        .map(|_| random_field_condition(rnd_gen))
-        .collect_vec();
-
-    let should_conditions_opt = match should_conditions.is_empty() {
-        false => Some(should_conditions),
-        true => None,
-    };
-
-    let must_conditions = (0..=2)
-        .take_while(|_| rnd1.gen::<f64>() > 0.6)
-        .map(|_| random_field_condition(rnd_gen))
-        .collect_vec();
-
-    let must_conditions_opt = match must_conditions.is_empty() {
-        false => Some(must_conditions),
-        true => None,
-    };
-
-    Filter {
-        should: should_conditions_opt,
-        must: must_conditions_opt,
-        must_not: None,
-    }
-}

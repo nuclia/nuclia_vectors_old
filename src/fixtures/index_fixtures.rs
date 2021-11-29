@@ -1,7 +1,6 @@
-use crate::payload_storage::ConditionChecker;
 use crate::spaces::metric::Metric;
 use crate::spaces::tools::mertic_object;
-use crate::types::{Distance, Filter, PointOffsetType, VectorElementType};
+use crate::types::{Distance, PointOffsetType, VectorElementType};
 use crate::vector_storage::simple_vector_storage::SimpleRawScorer;
 use bit_vec::BitVec;
 use itertools::Itertools;
@@ -12,13 +11,6 @@ pub fn random_vector<R: Rng + ?Sized>(rnd_gen: &mut R, size: usize) -> Vec<Vecto
     (0..size).map(|_| rnd_gen.gen()).collect()
 }
 
-pub struct FakeConditionChecker {}
-
-impl ConditionChecker for FakeConditionChecker {
-    fn check(&self, _point_id: PointOffsetType, _query: &Filter) -> bool {
-        true
-    }
-}
 
 pub struct TestRawScorerProducer {
     pub vectors: Vec<Array1<VectorElementType>>,

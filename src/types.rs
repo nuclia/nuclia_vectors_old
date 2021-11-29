@@ -47,8 +47,7 @@ pub struct ScoredPoint {
     pub version: SeqNumberType,
     /// Points vector distance to the query vector
     pub score: ScoreType,
-    /// Payload storage
-    pub payload: Option<TheMap<PayloadKeyType, PayloadType>>,
+
 }
 
 impl Eq for ScoredPoint {}
@@ -98,7 +97,6 @@ pub struct SegmentInfo {
     pub ram_usage_bytes: usize,
     pub disk_usage_bytes: usize,
     pub is_appendable: bool,
-    pub schema: HashMap<PayloadKeyType, PayloadSchemaInfo>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Copy, PartialEq)]
@@ -123,9 +121,6 @@ pub fn distance_order(distance: &Distance) -> Order {
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type", content = "options")]
 pub enum Indexes {
-    /// Do not use any index, scan whole vector collection during search.
-    /// Guarantee 100% precision, but may be time consuming on large collections.
-    Plain {},
     /// Use filterable HNSW index for approximate search. Is very fast even on a very huge collections,
     /// but require additional space to store index and additional time to build it.
     Hnsw(HnswConfig),
@@ -162,7 +157,7 @@ impl Indexes {
 
 impl Default for Indexes {
     fn default() -> Self {
-        Indexes::Plain {}
+        Indexes::Hnsw(Default::default())
     }
 }
 
@@ -401,8 +396,6 @@ pub enum Condition {
     Field(FieldCondition),
     /// Check if points id is in a given set
     HasId(HasIdCondition),
-    /// Nested filter
-    Filter(Filter),
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, Clone)]
@@ -485,43 +478,7 @@ pub struct WithPayload {
     /// Filter include and exclude payloads
     pub payload_selector: Option<PayloadSelector>,
 }
-#[derive(Debug, Deserialize, Serialize, JsonSchema, Clone)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "snake_case")]
-pub struct Filter {
-    /// At least one of thous conditions should match
-    pub should: Option<Vec<Condition>>,
-    /// All conditions must match
-    pub must: Option<Vec<Condition>>,
-    /// All conditions must NOT match
-    pub must_not: Option<Vec<Condition>>,
-}
 
-impl Filter {
-    pub fn new_should(condition: Condition) -> Self {
-        Filter {
-            should: Some(vec![condition]),
-            must: None,
-            must_not: None,
-        }
-    }
-
-    pub fn new_must(condition: Condition) -> Self {
-        Filter {
-            should: None,
-            must: Some(vec![condition]),
-            must_not: None,
-        }
-    }
-
-    pub fn new_must_not(condition: Condition) -> Self {
-        Filter {
-            should: None,
-            must: None,
-            must_not: Some(vec![condition]),
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -756,90 +713,6 @@ mod tests {
         let label = PayloadType::Keyword(vec!["Hello".to_owned()]);
         let label_json = serde_json::to_string(&label).unwrap();
         println!("{}", label_json);
-    }
-
-    #[test]
-    fn test_serialize_query() {
-        let filter = Filter {
-            must: Some(vec![Condition::Field(FieldCondition {
-                key: "hello".to_owned(),
-                r#match: Some(Match {
-                    keyword: Some("world".to_owned()),
-                    integer: None,
-                }),
-                range: None,
-                geo_bounding_box: None,
-                geo_radius: None,
-            })]),
-            must_not: None,
-            should: None,
-        };
-        let json = serde_json::to_string_pretty(&filter).unwrap();
-        println!("{}", json)
-    }
-
-    #[test]
-    fn test_deny_unknown_fields() {
-        let query1 = r#"
-         {
-            "wrong": "query"
-         }
-         "#;
-        let filter: Result<Filter, _> = serde_json::from_str(query1);
-
-        assert!(filter.is_err())
-    }
-
-    #[test]
-    fn test_payload_query_parse() {
-        let query1 = r#"
-        {
-            "must": [
-                {
-                    "key": "hello",
-                    "match": {
-                        "integer": 42
-                    }
-                },
-                {
-                    "must_not": [
-                        {
-                            "has_id": [1, 2, 3, 4]
-                        },
-                        {
-                            "key": "geo_field",
-                            "geo_bounding_box": {
-                                "top_left": {
-                                    "lon": 13.410146,
-                                    "lat": 52.519289
-                                },
-                                "bottom_right": {
-                                    "lon": 13.432683,
-                                    "lat": 52.505582
-                                }
-                            }
-                        }
-                    ]
-                }
-            ]
-        }
-        "#;
-
-        let filter: Filter = serde_json::from_str(query1).unwrap();
-        println!("{:?}", filter);
-        let must = filter.must.unwrap();
-        let _must_not = filter.must_not;
-        assert_eq!(must.len(), 2);
-        match must.get(1) {
-            Some(Condition::Filter(f)) => {
-                let must_not = &f.must_not;
-                match must_not {
-                    Some(v) => assert_eq!(v.len(), 2),
-                    None => assert!(false, "Filter expected"),
-                }
-            }
-            _ => assert!(false, "Condition expected"),
-        }
     }
 }
 

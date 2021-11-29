@@ -48,11 +48,9 @@ impl SegmentBuilder {
 
                 let other_id_tracker = other.id_tracker.borrow();
                 let other_vector_storage = other.vector_storage.borrow();
-                let other_payload_storage = other.payload_storage.borrow();
 
                 let mut id_tracker = self_segment.id_tracker.borrow_mut();
                 let mut vector_storage = self_segment.vector_storage.borrow_mut();
-                let mut payload_storage = self_segment.payload_storage.borrow_mut();
 
                 let new_internal_range = vector_storage.update_from(&*other_vector_storage)?;
 
@@ -67,10 +65,6 @@ impl SegmentBuilder {
                             // New point, just insert
                             id_tracker.set_link(external_id, new_internal_id)?;
                             id_tracker.set_version(external_id, other_version)?;
-                            payload_storage.assign_all(
-                                new_internal_id,
-                                other_payload_storage.payload(old_internal_id),
-                            )?;
                         }
                         Some(existing_version) => {
                             if existing_version < other_version {
@@ -81,10 +75,6 @@ impl SegmentBuilder {
                                 id_tracker.drop(external_id)?;
                                 id_tracker.set_link(external_id, new_internal_id)?;
                                 id_tracker.set_version(external_id, other_version)?;
-                                payload_storage.assign_all(
-                                    new_internal_id,
-                                    other_payload_storage.payload(old_internal_id),
-                                )?;
                             } else {
                                 // Old version is still good, do not move anything else
                                 // Mark newly added vector as removed
@@ -92,10 +82,6 @@ impl SegmentBuilder {
                             };
                         }
                     }
-                }
-
-                for field in other.payload_index.borrow().indexed_fields().into_iter() {
-                    self.indexed_fields.insert(field);
                 }
 
                 Ok(())
@@ -113,10 +99,6 @@ impl TryInto<Segment> for SegmentBuilder {
                 description: "Segment building error: created segment not found".to_owned(),
             })?;
             self.segment = None;
-
-            for field in self.indexed_fields.iter() {
-                segment.create_field_index(segment.version(), field)?;
-            }
 
             segment.vector_index.borrow_mut().build_index()?;
 

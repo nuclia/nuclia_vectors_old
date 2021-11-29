@@ -3,10 +3,9 @@ use crate::entry::entry_point::{
 };
 use crate::id_tracker::IdTracker;
 use crate::index::{PayloadIndex, VectorIndex};
-use crate::payload_storage::{ConditionChecker, PayloadStorage};
 use crate::spaces::tools::mertic_object;
 use crate::types::{
-    Filter, PayloadKeyType, PayloadKeyTypeRef, PayloadSchemaInfo, PayloadType, PointIdType,
+    PayloadKeyType, PayloadKeyTypeRef, PayloadSchemaInfo, PayloadType, PointIdType,
     PointOffsetType, ScoredPoint, SearchParams, SegmentConfig, SegmentInfo, SegmentState,
     SegmentType, SeqNumberType, TheMap, VectorElementType, WithPayload,
 };
@@ -27,9 +26,6 @@ pub struct Segment {
     pub current_path: PathBuf,
     pub id_tracker: Arc<AtomicRefCell<dyn IdTracker>>,
     pub vector_storage: Arc<AtomicRefCell<dyn VectorStorage>>,
-    pub payload_storage: Arc<AtomicRefCell<dyn PayloadStorage>>,
-    pub payload_index: Arc<AtomicRefCell<dyn PayloadIndex>>,
-    pub condition_checker: Arc<dyn ConditionChecker>,
     pub vector_index: Arc<AtomicRefCell<dyn VectorIndex>>,
     pub appendable_flag: bool,
     pub segment_type: SegmentType,
@@ -47,14 +43,6 @@ impl Segment {
             let mut vector_storage = self.vector_storage.borrow_mut();
             vector_storage.update_vector(old_internal_id, vector)
         }?;
-        if new_internal_index != old_internal_id {
-            // If vector was moved to a new internal id, move payload to this internal id as well
-            let mut payload_storage = self.payload_storage.borrow_mut();
-            let payload = payload_storage.drop(old_internal_id)?;
-            if let Some(payload) = payload {
-                payload_storage.assign_all(new_internal_index, payload)?
-            }
-        }
 
         Ok(new_internal_index)
     }
@@ -197,7 +185,6 @@ impl SegmentEntry for Segment {
         &self,
         vector: &[VectorElementType],
         with_payload: &WithPayload,
-        filter: Option<&Filter>,
         top: usize,
         params: Option<&SearchParams>,
     ) -> OperationResult<Vec<ScoredPoint>> {
@@ -212,7 +199,7 @@ impl SegmentEntry for Segment {
         let internal_result = self
             .vector_index
             .borrow()
-            .search(vector, filter, top, params);
+            .search(vector, top, params);
 
         let id_tracker = self.id_tracker.borrow();
 
@@ -236,22 +223,10 @@ impl SegmentEntry for Segment {
                                 point_id
                             ),
                         })?;
-                let payload = if with_payload.enable {
-                    let initial_payload = self.payload(point_id)?;
-                    let processed_payload = if let Some(i) = &with_payload.payload_selector {
-                        i.process(initial_payload)
-                    } else {
-                        initial_payload
-                    };
-                    Some(processed_payload)
-                } else {
-                    None
-                };
                 Ok(ScoredPoint {
                     id: point_id,
                     version: point_version,
-                    score: scored_point_offset.score,
-                    payload,
+                    score: scored_point_offset.score
                 })
             })
             .collect();
@@ -327,85 +302,6 @@ impl SegmentEntry for Segment {
         })
     }
 
-    fn set_full_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        full_payload: TheMap<PayloadKeyType, PayloadType>,
-    ) -> OperationResult<bool> {
-        self.handle_version_and_failure(op_num, Some(point_id), |segment| {
-            let internal_id = segment.lookup_internal_id(point_id)?;
-            segment
-                .payload_storage
-                .borrow_mut()
-                .assign_all(internal_id, full_payload)?;
-            Ok(true)
-        })
-    }
-
-    fn set_full_payload_with_json(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        full_payload: &str,
-    ) -> OperationResult<bool> {
-        self.handle_version_and_failure(op_num, Some(point_id), |segment| {
-            let internal_id = segment.lookup_internal_id(point_id)?;
-            let payload: TheMap<PayloadKeyType, serde_json::value::Value> =
-                serde_json::from_str(full_payload)?;
-            segment
-                .payload_storage
-                .borrow_mut()
-                .assign_all_with_value(internal_id, payload)?;
-            Ok(true)
-        })
-    }
-
-    fn set_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        key: PayloadKeyTypeRef,
-        payload: PayloadType,
-    ) -> OperationResult<bool> {
-        self.handle_version_and_failure(op_num, Some(point_id), |segment| {
-            let internal_id = segment.lookup_internal_id(point_id)?;
-            segment
-                .payload_storage
-                .borrow_mut()
-                .assign(internal_id, key, payload)?;
-            Ok(true)
-        })
-    }
-
-    fn delete_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-        key: PayloadKeyTypeRef,
-    ) -> OperationResult<bool> {
-        self.handle_version_and_failure(op_num, Some(point_id), |segment| {
-            let internal_id = segment.lookup_internal_id(point_id)?;
-            segment
-                .payload_storage
-                .borrow_mut()
-                .delete(internal_id, key)?;
-            Ok(true)
-        })
-    }
-
-    fn clear_payload(
-        &mut self,
-        op_num: SeqNumberType,
-        point_id: PointIdType,
-    ) -> OperationResult<bool> {
-        self.handle_version_and_failure(op_num, Some(point_id), |segment| {
-            let internal_id = segment.lookup_internal_id(point_id)?;
-            segment.payload_storage.borrow_mut().drop(internal_id)?;
-            Ok(true)
-        })
-    }
-
     fn vector(&self, point_id: PointIdType) -> OperationResult<Vec<VectorElementType>> {
         let internal_id = self.lookup_internal_id(point_id)?;
         Ok(self
@@ -413,14 +309,6 @@ impl SegmentEntry for Segment {
             .borrow()
             .get_vector(internal_id)
             .unwrap())
-    }
-
-    fn payload(
-        &self,
-        point_id: PointIdType,
-    ) -> OperationResult<TheMap<PayloadKeyType, PayloadType>> {
-        let internal_id = self.lookup_internal_id(point_id)?;
-        Ok(self.payload_storage.borrow().payload(internal_id))
     }
 
     fn iter_points(&self) -> Box<dyn Iterator<Item = PointIdType> + '_> {
@@ -435,29 +323,15 @@ impl SegmentEntry for Segment {
         &'a self,
         offset: PointIdType,
         limit: usize,
-        filter: Option<&'a Filter>,
     ) -> Vec<PointIdType> {
         let storage = self.vector_storage.borrow();
-        match filter {
-            None => self
-                .id_tracker
-                .borrow()
-                .iter_from(offset)
-                .map(|x| x.0)
-                .take(limit)
-                .collect(),
-            Some(condition) => self
-                .id_tracker
-                .borrow()
-                .iter_from(offset)
-                .filter(move |(_, internal_id)| !storage.is_deleted(*internal_id))
-                .filter(move |(_, internal_id)| {
-                    self.condition_checker.check(*internal_id, condition)
-                })
-                .map(|x| x.0)
-                .take(limit)
-                .collect(),
-        }
+        self
+            .id_tracker
+            .borrow()
+            .iter_from(offset)
+            .map(|x| x.0)
+            .take(limit)
+            .collect()
     }
 
     fn has_point(&self, point_id: PointIdType) -> bool {
@@ -477,23 +351,6 @@ impl SegmentEntry for Segment {
     }
 
     fn info(&self) -> SegmentInfo {
-        let indexed_fields = self.payload_index.borrow().indexed_fields();
-        let schema = self
-            .payload_storage
-            .borrow()
-            .schema()
-            .into_iter()
-            .map(|(key, data_type)| {
-                let is_indexed = indexed_fields.contains(&key);
-                (
-                    key,
-                    PayloadSchemaInfo {
-                        data_type,
-                        indexed: is_indexed,
-                    },
-                )
-            })
-            .collect();
 
         SegmentInfo {
             segment_type: self.segment_type,
@@ -502,7 +359,6 @@ impl SegmentEntry for Segment {
             ram_usage_bytes: 0,  // ToDo: Implement
             disk_usage_bytes: 0, // ToDo: Implement
             is_appendable: self.appendable_flag,
-            schema,
         }
     }
 
@@ -523,7 +379,6 @@ impl SegmentEntry for Segment {
         let state = self.get_state();
 
         self.id_tracker.borrow().flush()?;
-        self.payload_storage.borrow().flush()?;
         self.vector_storage.borrow().flush()?;
         self.save_state(&state)?;
 
@@ -539,146 +394,7 @@ impl SegmentEntry for Segment {
         Ok(remove_dir_all(&deleted_path)?)
     }
 
-    fn delete_field_index(&mut self, op_num: u64, key: PayloadKeyTypeRef) -> OperationResult<bool> {
-        self.handle_version_and_failure(op_num, None, |segment| {
-            segment.payload_index.borrow_mut().drop_index(key)?;
-            Ok(true)
-        })
-    }
-
-    fn create_field_index(&mut self, op_num: u64, key: PayloadKeyTypeRef) -> OperationResult<bool> {
-        self.handle_version_and_failure(op_num, None, |segment| {
-            segment.payload_index.borrow_mut().set_indexed(key)?;
-            Ok(true)
-        })
-    }
-
-    fn get_indexed_fields(&self) -> Vec<PayloadKeyType> {
-        self.payload_index.borrow().indexed_fields()
-    }
-
     fn check_error(&self) -> Option<SegmentFailedState> {
         self.error_status.clone()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::entry::entry_point::SegmentEntry;
-    use crate::segment_constructor::build_segment;
-    use crate::types::{Distance, Indexes, PayloadIndexType, SegmentConfig, StorageType};
-    use tempdir::TempDir;
-
-    #[test]
-    fn test_set_invalid_payload_from_json() {
-        let data1 = r#"
-        {
-            "invalid_data"
-        }"#;
-        let data2 = r#"
-        {
-            "array": [1, "hello"],
-        }"#;
-
-        let dir = TempDir::new("payload_dir").unwrap();
-        let dim = 2;
-        let config = SegmentConfig {
-            vector_size: dim,
-            index: Indexes::Plain {},
-            payload_index: Some(PayloadIndexType::Plain),
-            storage_type: StorageType::InMemory,
-            distance: Distance::Dot,
-        };
-
-        let mut segment = build_segment(dir.path(), &config).unwrap();
-        segment.upsert_point(0, 0, &[1.0, 1.0]).unwrap();
-        let result1 = segment.set_full_payload_with_json(0, 0, &data1.to_string());
-        match result1 {
-            Ok(_) => assert!(false),
-            Err(_) => assert!(true),
-        }
-        let result2 = segment.set_full_payload_with_json(0, 0, &data2.to_string());
-        match result2 {
-            Ok(_) => assert!(false),
-            Err(_) => assert!(true),
-        }
-    }
-
-    #[test]
-    fn test_from_filter_attributes() {
-        let data = r#"
-        {
-            "name": "John Doe",
-            "age": 43,
-            "metadata": {
-                "height": 50,
-                "width": 60
-            }
-        }"#;
-
-        let dir = TempDir::new("payload_dir").unwrap();
-        let dim = 2;
-        let config = SegmentConfig {
-            vector_size: dim,
-            index: Indexes::Plain {},
-            payload_index: Some(PayloadIndexType::Plain),
-            storage_type: StorageType::InMemory,
-            distance: Distance::Dot,
-        };
-
-        let mut segment = build_segment(dir.path(), &config).unwrap();
-        segment.upsert_point(0, 0, &[1.0, 1.0]).unwrap();
-        segment
-            .set_full_payload_with_json(0, 0, &data.to_string())
-            .unwrap();
-
-        let filter_valid_str = r#"
-        {
-            "must": [
-                {
-                    "key": "metadata__height",
-                    "match": {
-                        "integer": 50
-                    }
-                }
-            ]
-        }"#;
-
-        let filter_valid: Filter = serde_json::from_str(filter_valid_str).unwrap();
-        let filter_invalid_str = r#"
-        {
-            "must": [
-                {
-                    "key": "metadata__height",
-                    "match": {
-                        "integer": 60
-                    }
-                }
-            ]
-        }"#;
-
-        let filter_invalid: Filter = serde_json::from_str(filter_invalid_str).unwrap();
-        let results_with_valid_filter = segment
-            .search(
-                &[1.0, 1.0],
-                &WithPayload::default(),
-                Some(&filter_valid),
-                1,
-                None,
-            )
-            .unwrap();
-        assert_eq!(results_with_valid_filter.len(), 1);
-        assert_eq!(results_with_valid_filter.first().unwrap().id, 0);
-        let results_with_invalid_filter = segment
-            .search(
-                &[1.0, 1.0],
-                &WithPayload::default(),
-                Some(&filter_invalid),
-                1,
-                None,
-            )
-            .unwrap();
-        assert!(results_with_invalid_filter.is_empty());
     }
 }

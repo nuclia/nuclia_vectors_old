@@ -1,7 +1,6 @@
 use crate::entry::entry_point::OperationResult;
 use crate::index::field_index::{CardinalityEstimation, PayloadBlockCondition};
-use crate::types::{
-    Filter, PayloadKeyType, PayloadKeyTypeRef, PointOffsetType, SearchParams, VectorElementType,
+use crate::types::{PayloadKeyType, PayloadKeyTypeRef, PointOffsetType, SearchParams, VectorElementType,
 };
 use crate::vector_storage::ScoredPointOffset;
 
@@ -11,7 +10,6 @@ pub trait VectorIndex {
     fn search(
         &self,
         vector: &[VectorElementType],
-        filter: Option<&Filter>,
         top: usize,
         params: Option<&SearchParams>,
     ) -> Vec<ScoredPointOffset>;
@@ -31,12 +29,11 @@ pub trait PayloadIndex {
     fn drop_index(&mut self, field: PayloadKeyTypeRef) -> OperationResult<()>;
 
     /// Estimate amount of points (min, max) which satisfies filtering condition.
-    fn estimate_cardinality(&self, query: &Filter) -> CardinalityEstimation;
+    fn estimate_cardinality(&self) -> CardinalityEstimation;
 
     /// Return list of all point ids, which satisfy filtering criteria
     fn query_points<'a>(
         &'a self,
-        query: &'a Filter,
     ) -> Box<dyn Iterator<Item = PointOffsetType> + 'a>;
 
     /// Iterate conditions for payload blocks with minimum size of `threshold`
