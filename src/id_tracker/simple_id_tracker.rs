@@ -2,7 +2,6 @@ use crate::entry::entry_point::OperationResult;
 use crate::id_tracker::IdTracker;
 use crate::types::{PointIdType, PointOffsetType, SeqNumberType};
 use bincode;
-use rocksdb::{IteratorMode, Options, DB};
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
@@ -16,43 +15,19 @@ pub struct SimpleIdTracker {
     internal_to_external: HashMap<PointOffsetType, PointIdType>,
     external_to_internal: BTreeMap<PointIdType, PointOffsetType>,
     external_to_version: HashMap<PointIdType, SeqNumberType>,
-    store: DB,
 }
 
 impl SimpleIdTracker {
     pub fn open(path: &Path) -> OperationResult<Self> {
-        let mut options: Options = Options::default();
-        options.set_write_buffer_size(DB_CACHE_SIZE);
-        options.create_if_missing(true);
-        options.create_missing_column_families(true);
-        let store = DB::open_cf(&options, path, [MAPPING_CF, VERSIONS_CF])?;
-
+        
         let mut internal_to_external: HashMap<PointOffsetType, PointIdType> = Default::default();
         let mut external_to_internal: BTreeMap<PointIdType, PointOffsetType> = Default::default();
         let mut external_to_version: HashMap<PointIdType, SeqNumberType> = Default::default();
-
-        for (key, val) in
-            store.iterator_cf(store.cf_handle(MAPPING_CF).unwrap(), IteratorMode::Start)
-        {
-            let external_id: PointIdType = bincode::deserialize(&key).unwrap();
-            let internal_id: PointOffsetType = bincode::deserialize(&val).unwrap();
-            internal_to_external.insert(internal_id, external_id);
-            external_to_internal.insert(external_id, internal_id);
-        }
-
-        for (key, val) in
-            store.iterator_cf(store.cf_handle(VERSIONS_CF).unwrap(), IteratorMode::Start)
-        {
-            let external_id: PointIdType = bincode::deserialize(&key).unwrap();
-            let version: SeqNumberType = bincode::deserialize(&val).unwrap();
-            external_to_version.insert(external_id, version);
-        }
 
         Ok(SimpleIdTracker {
             internal_to_external,
             external_to_internal,
             external_to_version,
-            store,
         })
     }
 }
@@ -68,11 +43,6 @@ impl IdTracker for SimpleIdTracker {
         version: SeqNumberType,
     ) -> OperationResult<()> {
         self.external_to_version.insert(external_id, version);
-        self.store.put_cf(
-            self.store.cf_handle(VERSIONS_CF).unwrap(),
-            bincode::serialize(&external_id).unwrap(),
-            bincode::serialize(&version).unwrap(),
-        )?;
         Ok(())
     }
 
@@ -92,11 +62,6 @@ impl IdTracker for SimpleIdTracker {
         self.external_to_internal.insert(external_id, internal_id);
         self.internal_to_external.insert(internal_id, external_id);
 
-        self.store.put_cf(
-            self.store.cf_handle(MAPPING_CF).unwrap(),
-            bincode::serialize(&external_id).unwrap(),
-            bincode::serialize(&internal_id).unwrap(),
-        )?;
         Ok(())
     }
 
@@ -108,14 +73,7 @@ impl IdTracker for SimpleIdTracker {
             Some(x) => self.internal_to_external.remove(&x),
             None => None,
         };
-        self.store.delete_cf(
-            self.store.cf_handle(MAPPING_CF).unwrap(),
-            bincode::serialize(&external_id).unwrap(),
-        )?;
-        self.store.delete_cf(
-            self.store.cf_handle(VERSIONS_CF).unwrap(),
-            bincode::serialize(&external_id).unwrap(),
-        )?;
+        
         Ok(())
     }
 
@@ -139,11 +97,7 @@ impl IdTracker for SimpleIdTracker {
     }
 
     fn flush(&self) -> OperationResult<()> {
-        self.store
-            .flush_cf(self.store.cf_handle(MAPPING_CF).unwrap())?;
-        self.store
-            .flush_cf(self.store.cf_handle(VERSIONS_CF).unwrap())?;
-        Ok(self.store.flush()?)
+        Ok(())
     }
 }
 

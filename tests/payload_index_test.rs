@@ -3,11 +3,11 @@ mod tests {
     use itertools::Itertools;
     use segment::entry::entry_point::SegmentEntry;
     use segment::fixtures::payload_fixtures::{
-        random_filter, random_int_payload, random_keyword_payload, random_vector,
+        random_int_payload, random_keyword_payload, random_vector,
     };
     use segment::segment_constructor::build_segment;
     use segment::types::{
-        Condition, Distance, FieldCondition, Filter, Indexes, PayloadIndexType, PayloadKeyType,
+        Condition, Distance, FieldCondition, Indexes, PayloadIndexType, PayloadKeyType,
         PayloadType, Range, SegmentConfig, StorageType, TheMap, WithPayload,
     };
     use tempdir::TempDir;
@@ -41,47 +41,20 @@ mod tests {
             payload.insert(int_key.clone(), random_int_payload(&mut rnd, 2));
 
             struct_segment.upsert_point(opnum, idx, &vector).unwrap();
-            struct_segment
-                .set_full_payload(opnum, idx, payload.clone())
-                .unwrap();
 
             opnum += 1;
         }
 
-        struct_segment.create_field_index(opnum, &str_key).unwrap();
-        struct_segment.create_field_index(opnum, &int_key).unwrap();
-
-        let filter = Filter::new_must(Condition::Field(FieldCondition {
-            key: int_key,
-            r#match: None,
-            range: Some(Range {
-                lt: None,
-                gt: None,
-                gte: Some(50.),
-                lte: Some(100.),
-            }),
-            geo_bounding_box: None,
-            geo_radius: None,
-        }));
-
-        let estimation = struct_segment
-            .payload_index
-            .borrow()
-            .estimate_cardinality(&filter);
 
         let exact = struct_segment
             .vector_storage
             .borrow()
             .iter_ids()
-            .filter(|x| struct_segment.condition_checker.check(*x, &filter))
             .collect_vec()
             .len();
 
         eprintln!("exact = {:#?}", exact);
-        eprintln!("estimation = {:#?}", estimation);
 
-        assert!(exact <= estimation.max);
-        assert!(exact >= estimation.min);
     }
 
     #[test]
@@ -125,29 +98,17 @@ mod tests {
             plain_segment.upsert_point(idx, idx, &vector).unwrap();
             struct_segment.upsert_point(idx, idx, &vector).unwrap();
 
-            plain_segment
-                .set_full_payload(idx, idx, payload.clone())
-                .unwrap();
-            struct_segment
-                .set_full_payload(idx, idx, payload.clone())
-                .unwrap();
-
             opnum += 1;
         }
-
-        struct_segment.create_field_index(opnum, &str_key).unwrap();
-        struct_segment.create_field_index(opnum, &int_key).unwrap();
 
         let attempts = 100;
         for _i in 0..attempts {
             let query_vector = random_vector(&mut rnd, dim);
-            let query_filter = random_filter(&mut rnd);
 
             let plain_result = plain_segment
                 .search(
                     &query_vector,
                     &WithPayload::default(),
-                    Some(&query_filter),
                     5,
                     None,
                 )
@@ -156,20 +117,10 @@ mod tests {
                 .search(
                     &query_vector,
                     &WithPayload::default(),
-                    Some(&query_filter),
                     5,
                     None,
                 )
                 .unwrap();
-
-            let estimation = struct_segment
-                .payload_index
-                .borrow()
-                .estimate_cardinality(&query_filter);
-
-            assert!(estimation.min <= estimation.exp, "{:#?}", estimation);
-            assert!(estimation.exp <= estimation.max, "{:#?}", estimation);
-            assert!(estimation.max <= num_points as usize, "{:#?}", estimation);
 
             plain_result
                 .iter()

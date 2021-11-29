@@ -1,6 +1,7 @@
 use crate::entry::entry_point::{OperationError, OperationResult};
 use crate::id_tracker::simple_id_tracker::SimpleIdTracker;
 use crate::index::hnsw_index::hnsw::HNSWIndex;
+use crate::index::plain_index::PlainIndex;
 use crate::index::{PayloadIndex, VectorIndex};
 use crate::segment::{Segment, SEGMENT_STATE_FILE};
 use crate::types::{
@@ -47,6 +48,9 @@ fn create_segment(
     };
 
     let vector_index: Arc<AtomicRefCell<dyn VectorIndex>> = match config.index {
+        Indexes::Plain { .. } => sp(PlainIndex::new(
+            vector_storage.clone(),
+        )),
         Indexes::Hnsw(hnsw_config) => sp(HNSWIndex::open(
             &vector_index_path,
             vector_storage.clone(),
@@ -55,6 +59,7 @@ fn create_segment(
     };
 
     let segment_type = match config.index {
+        Indexes::Plain { .. } => SegmentType::Plain,
         Indexes::Hnsw { .. } => SegmentType::Indexed,
     };
 

@@ -124,6 +124,9 @@ pub enum Indexes {
     /// Use filterable HNSW index for approximate search. Is very fast even on a very huge collections,
     /// but require additional space to store index and additional time to build it.
     Hnsw(HnswConfig),
+    /// Do not use any index, scan whole vector collection during search.
+    /// Guarantee 100% precision, but may be time consuming on large collections.
+    Plain {},
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema, Copy, Clone, PartialEq, Eq)]

@@ -6,11 +6,10 @@ mod tests {
     use segment::entry::entry_point::SegmentEntry;
     use segment::fixtures::payload_fixtures::{random_int_payload, random_vector};
     use segment::index::hnsw_index::hnsw::HNSWIndex;
-    use segment::index::struct_payload_index::StructPayloadIndex;
     use segment::index::{PayloadIndex, VectorIndex};
     use segment::segment_constructor::build_segment;
     use segment::types::{
-        Condition, Distance, FieldCondition, Filter, HnswConfig, Indexes, PayloadIndexType,
+        Condition, Distance, FieldCondition, HnswConfig, Indexes, PayloadIndexType,
         PayloadKeyType, PayloadType, PointIdType, Range, SearchParams, SegmentConfig,
         SeqNumberType, StorageType, TheMap,
     };
@@ -56,22 +55,9 @@ mod tests {
             segment
                 .upsert_point(idx as SeqNumberType, idx, &vector)
                 .unwrap();
-            segment
-                .set_full_payload(idx as SeqNumberType, idx, payload.clone())
-                .unwrap();
         }
         // let opnum = num_vectors + 1;
 
-        let payload_index = StructPayloadIndex::open(
-            segment.condition_checker.clone(),
-            segment.vector_storage.clone(),
-            segment.payload_storage.clone(),
-            segment.id_tracker.clone(),
-            payload_index_dir.path(),
-        )
-        .unwrap();
-
-        let payload_index_ptr = Arc::new(AtomicRefCell::new(payload_index));
 
         let hnsw_config = HnswConfig {
             m,
@@ -81,32 +67,14 @@ mod tests {
 
         let mut hnsw_index = HNSWIndex::open(
             hnsw_dir.path(),
-            segment.condition_checker.clone(),
             segment.vector_storage.clone(),
-            payload_index_ptr.clone(),
             hnsw_config,
         )
         .unwrap();
 
         hnsw_index.build_index().unwrap();
 
-        payload_index_ptr
-            .borrow_mut()
-            .set_indexed(&int_key)
-            .unwrap();
-        let borrowed_payload_index = payload_index_ptr.borrow();
-        let blocks = borrowed_payload_index
-            .payload_blocks(&int_key, indexing_threshold)
-            .collect_vec();
-        for block in blocks.iter() {
-            assert!(
-                block.condition.range.is_some(),
-                "only range conditions should be generated for this type of payload"
-            );
-        }
-
-        assert_eq!(blocks.len(), num_vectors as usize / indexing_threshold * 2);
-
+       
         hnsw_index.build_index().unwrap();
 
         let top = 3;
@@ -115,29 +83,8 @@ mod tests {
         for _i in 0..attempts {
             let query = random_vector(&mut rnd, dim);
 
-            let range_size = 40;
-            let left_range = rnd.gen_range(0..400);
-            let right_range = left_range + range_size;
-
-            let filter = Filter::new_must(Condition::Field(FieldCondition {
-                key: int_key.clone(),
-                r#match: None,
-                range: Some(Range {
-                    lt: None,
-                    gt: None,
-                    gte: Some(left_range as f64),
-                    lte: Some(right_range as f64),
-                }),
-                geo_bounding_box: None,
-                geo_radius: None,
-            }));
-
-            let filter_query = Some(&filter);
-            // let filter_query = None;
-
             let index_result = hnsw_index.search_with_graph(
                 &query,
-                filter_query,
                 top,
                 Some(&SearchParams { hnsw_ef: Some(ef) }),
             );
@@ -146,7 +93,7 @@ mod tests {
                 segment
                     .vector_index
                     .borrow()
-                    .search(&query, filter_query, top, None);
+                    .search(&query, top, None);
 
             if plain_result == index_result {
                 hits += 1;

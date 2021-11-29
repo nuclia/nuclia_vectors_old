@@ -3,7 +3,6 @@ use crate::types::{
     SegmentConfig, SegmentInfo, SegmentType, SeqNumberType, TheMap, VectorElementType, WithPayload,
 };
 use atomicwrites::Error as AtomicIoError;
-use rocksdb::Error;
 use std::io::Error as IoError;
 use std::result;
 use thiserror::Error;
@@ -49,14 +48,6 @@ impl From<IoError> for OperationError {
     fn from(err: IoError) -> Self {
         OperationError::ServiceError {
             description: format!("{}", err),
-        }
-    }
-}
-
-impl From<Error> for OperationError {
-    fn from(err: Error) -> Self {
-        OperationError::ServiceError {
-            description: format!("persistence error: {}", err),
         }
     }
 }
