@@ -3,8 +3,8 @@ mod fixtures;
 #[cfg(test)]
 mod tests {
     use crate::fixtures::segment::build_segment_1;
-    use segment::entry::entry_point::SegmentEntry;
-    use segment::types::{Condition, WithPayload};
+    use nuclia_vectors::entry::entry_point::SegmentEntry;
+    use nuclia_vectors::types::{Condition, WithPayload};
     use std::collections::HashSet;
     use tempdir::TempDir;
 

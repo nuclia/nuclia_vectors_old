@@ -1,8 +1,8 @@
 
-use segment::entry::entry_point::SegmentEntry;
-use segment::segment::Segment;
-use segment::segment_constructor::simple_segment_constructor::build_simple_segment;
-use segment::types::{Distance, PayloadType};
+use nuclia_vectors::entry::entry_point::SegmentEntry;
+use nuclia_vectors::segment::Segment;
+use nuclia_vectors::segment_constructor::simple_segment_constructor::build_simple_segment;
+use nuclia_vectors::types::{Distance, PayloadType};
 use std::path::Path;
 
 pub fn empty_segment(path: &Path) -> Segment {

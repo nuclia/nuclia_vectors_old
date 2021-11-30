@@ -4,9 +4,9 @@ mod fixtures;
 mod tests {
     use crate::fixtures::segment::{build_segment_1, build_segment_2};
     use itertools::Itertools;
-    use segment::entry::entry_point::SegmentEntry;
-    use segment::segment::Segment;
-    use segment::segment_constructor::segment_builder::SegmentBuilder;
+    use nuclia_vectors::entry::entry_point::SegmentEntry;
+    use nuclia_vectors::segment::Segment;
+    use nuclia_vectors::segment_constructor::segment_builder::SegmentBuilder;
     use std::convert::TryInto;
     use tempdir::TempDir;
 

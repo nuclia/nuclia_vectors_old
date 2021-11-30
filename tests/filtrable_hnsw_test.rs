@@ -3,12 +3,12 @@ mod tests {
     use atomic_refcell::AtomicRefCell;
     use itertools::Itertools;
     use rand::{thread_rng, Rng};
-    use segment::entry::entry_point::SegmentEntry;
-    use segment::fixtures::payload_fixtures::{random_int_payload, random_vector};
-    use segment::index::hnsw_index::hnsw::HNSWIndex;
-    use segment::index::{PayloadIndex, VectorIndex};
-    use segment::segment_constructor::build_segment;
-    use segment::types::{
+    use nuclia_vectors::entry::entry_point::SegmentEntry;
+    use nuclia_vectors::fixtures::payload_fixtures::{random_int_payload, random_vector};
+    use nuclia_vectors::index::hnsw_index::hnsw::HNSWIndex;
+    use nuclia_vectors::index::{PayloadIndex, VectorIndex};
+    use nuclia_vectors::segment_constructor::build_segment;
+    use nuclia_vectors::types::{
         Condition, Distance, FieldCondition, HnswConfig, Indexes, PayloadIndexType,
         PayloadKeyType, PayloadType, PointIdType, Range, SearchParams, SegmentConfig,
         SeqNumberType, StorageType, TheMap,

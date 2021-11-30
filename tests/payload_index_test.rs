@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use segment::entry::entry_point::SegmentEntry;
-    use segment::fixtures::payload_fixtures::{
+    use nuclia_vectors::entry::entry_point::SegmentEntry;
+    use nuclia_vectors::fixtures::payload_fixtures::{
         random_int_payload, random_keyword_payload, random_vector,
     };
-    use segment::segment_constructor::build_segment;
-    use segment::types::{
+    use nuclia_vectors::segment_constructor::build_segment;
+    use nuclia_vectors::types::{
         Condition, Distance, FieldCondition, Indexes, PayloadIndexType, PayloadKeyType,
         PayloadType, Range, SegmentConfig, StorageType, TheMap, WithPayload,
     };

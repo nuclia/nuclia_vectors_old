@@ -2,10 +2,10 @@ mod prof;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use rand::thread_rng;
-use segment::fixtures::index_fixtures::{FakeConditionChecker, TestRawScorerProducer};
-use segment::index::hnsw_index::graph_layers::GraphLayers;
-use segment::index::hnsw_index::point_scorer::FilteredScorer;
-use segment::types::{Distance, PointOffsetType};
+use nuclia_vectors::fixtures::index_fixtures::{FakeConditionChecker, TestRawScorerProducer};
+use nuclia_vectors::index::hnsw_index::graph_layers::GraphLayers;
+use nuclia_vectors::index::hnsw_index::point_scorer::FilteredScorer;
+use nuclia_vectors::types::{Distance, PointOffsetType};
 
 const NUM_VECTORS: usize = 10000;
 const DIM: usize = 32;

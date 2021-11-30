@@ -3,8 +3,8 @@ mod fixtures;
 #[cfg(test)]
 mod tests {
     use crate::fixtures::segment::empty_segment;
-    use segment::entry::entry_point::{OperationError, SegmentEntry, SegmentFailedState};
-    use segment::types::PayloadType;
+    use nuclia_vectors::entry::entry_point::{OperationError, SegmentEntry, SegmentFailedState};
+    use nuclia_vectors::types::PayloadType;
     use tempdir::TempDir;
 
     #[test]

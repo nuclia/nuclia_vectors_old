@@ -2,7 +2,7 @@ mod prof;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use itertools::Itertools;
-use segment::types::{PayloadInterface, PayloadInterfaceStrict, PayloadVariant};
+use nuclia_vectors::types::{PayloadInterface, PayloadInterfaceStrict, PayloadVariant};
 
 fn serde_formats_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("serde-formats-group");
