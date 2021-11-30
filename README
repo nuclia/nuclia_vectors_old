@@ -1,0 +1,5 @@
+This crate is currently a fork of the library segment crate of qdrant project, itself part of https://github.com/qdrant/qdrant.
+
+Based on Qdrant work we did a similar HNSW index for vector indexing.
+
+Please prefer using qdrant.
