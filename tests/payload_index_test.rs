@@ -31,7 +31,7 @@ mod tests {
         let int_key = "int".to_string();
 
         let num_points = 10000;
-        let mut struct_segment = build_segment(dir1.path(), &config).unwrap();
+        let mut struct_segment = build_segment(dir1.path(), &config, false).unwrap();
 
         let mut opnum = 0;
         for idx in 0..num_points {
@@ -75,9 +75,9 @@ mod tests {
             distance: Distance::Dot,
         };
 
-        let mut plain_segment = build_segment(dir1.path(), &config).unwrap();
+        let mut plain_segment = build_segment(dir1.path(), &config, false).unwrap();
         config.payload_index = Some(PayloadIndexType::Struct);
-        let mut struct_segment = build_segment(dir2.path(), &config).unwrap();
+        let mut struct_segment = build_segment(dir2.path(), &config, false).unwrap();
 
         let str_key = "kvd".to_string();
         let int_key = "int".to_string();

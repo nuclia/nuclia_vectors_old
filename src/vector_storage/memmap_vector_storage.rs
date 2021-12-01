@@ -290,7 +290,7 @@ mod tests {
 
         {
             let dir2 = TempDir::new("storage_dir2").unwrap();
-            let mut storage2 = SimpleVectorStorage::open(dir2.path(), 4, dist).unwrap();
+            let mut storage2 = SimpleVectorStorage::open(dir2.path(), 4, dist, false).unwrap();
 
             storage2.put_vector(vec1.clone()).unwrap();
             storage2.put_vector(vec2.clone()).unwrap();
@@ -310,7 +310,7 @@ mod tests {
 
         {
             let dir2 = TempDir::new("storage_dir2").unwrap();
-            let mut storage2 = SimpleVectorStorage::open(dir2.path(), 4, dist).unwrap();
+            let mut storage2 = SimpleVectorStorage::open(dir2.path(), 4, dist, false).unwrap();
             storage2.put_vector(vec4.clone()).unwrap();
             storage2.put_vector(vec5.clone()).unwrap();
             storage.update_from(&storage2).unwrap();
@@ -348,7 +348,7 @@ mod tests {
 
         {
             let dir2 = TempDir::new("storage_dir2").unwrap();
-            let mut storage2 = SimpleVectorStorage::open(dir2.path(), 4, dist).unwrap();
+            let mut storage2 = SimpleVectorStorage::open(dir2.path(), 4, dist, false).unwrap();
 
             storage2.put_vector(vec1.clone()).unwrap();
             storage2.put_vector(vec2.clone()).unwrap();

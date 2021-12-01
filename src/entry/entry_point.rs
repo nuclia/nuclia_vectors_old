@@ -4,6 +4,7 @@ use crate::types::{
 };
 use atomicwrites::Error as AtomicIoError;
 use std::io::Error as IoError;
+use rocksdb::Error;
 use std::result;
 use thiserror::Error;
 
@@ -48,6 +49,14 @@ impl From<IoError> for OperationError {
     fn from(err: IoError) -> Self {
         OperationError::ServiceError {
             description: format!("{}", err),
+        }
+    }
+}
+
+impl From<Error> for OperationError {
+    fn from(err: Error) -> Self {
+        OperationError::ServiceError {
+            description: format!("persistence error: {}", err),
         }
     }
 }

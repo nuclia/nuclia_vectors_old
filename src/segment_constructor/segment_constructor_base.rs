@@ -25,10 +25,9 @@ fn create_segment(
     version: SeqNumberType,
     segment_path: &Path,
     config: &SegmentConfig,
+    read_only: bool
 ) -> OperationResult<Segment> {
     let tracker_path = segment_path.join("id_tracker");
-    let payload_storage_path = segment_path.join("payload_storage");
-    let payload_index_path = segment_path.join("payload_index");
     let vector_storage_path = segment_path.join("vector_storage");
     let vector_index_path = segment_path.join("vector_index");
 
@@ -39,6 +38,7 @@ fn create_segment(
             &vector_storage_path,
             config.vector_size,
             config.distance,
+            read_only
         )?),
         StorageType::Mmap => sp(MemmapVectorStorage::open(
             &vector_storage_path,
@@ -80,7 +80,7 @@ fn create_segment(
     })
 }
 
-pub fn load_segment(path: &Path) -> OperationResult<Segment> {
+pub fn load_segment(path: &Path, read_only: bool) -> OperationResult<Segment> {
     let segment_config_path = path.join(SEGMENT_STATE_FILE);
     let mut contents = String::new();
 
@@ -96,7 +96,7 @@ pub fn load_segment(path: &Path) -> OperationResult<Segment> {
             ),
         })?;
 
-    create_segment(segment_state.version, path, &segment_state.config)
+    create_segment(segment_state.version, path, &segment_state.config, read_only)
 }
 
 /// Build segment instance using given configuration.
@@ -108,10 +108,10 @@ pub fn load_segment(path: &Path) -> OperationResult<Segment> {
 /// * `config` - Segment configuration
 ///
 ///
-pub fn build_segment(path: &Path, config: &SegmentConfig) -> OperationResult<Segment> {
+pub fn build_segment(path: &Path, config: &SegmentConfig, read_only: bool) -> OperationResult<Segment> {
     create_dir_all(&path)?;
 
-    let segment = create_segment(0, &path, config)?;
+    let segment = create_segment(0, &path, config, read_only)?;
     segment.save_current_state()?;
 
     Ok(segment)

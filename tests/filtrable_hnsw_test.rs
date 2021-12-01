@@ -43,7 +43,7 @@ mod tests {
 
         let int_key = "int".to_string();
 
-        let mut segment = build_segment(dir.path(), &config).unwrap();
+        let mut segment = build_segment(dir.path(), &config, false).unwrap();
         for idx in 0..num_vectors {
             let vector = random_vector(&mut rnd, dim);
             let mut payload: TheMap<PayloadKeyType, PayloadType> = Default::default();

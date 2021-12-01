@@ -6,7 +6,7 @@ use nuclia_vectors::types::{Distance, PayloadType};
 use std::path::Path;
 
 pub fn empty_segment(path: &Path) -> Segment {
-    build_simple_segment(path, 4, Distance::Dot).unwrap()
+    build_simple_segment(path, 4, Distance::Dot, false).unwrap()
 }
 
 pub fn build_segment_1(path: &Path) -> Segment {

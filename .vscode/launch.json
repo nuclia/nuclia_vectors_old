@@ -1,0 +1,217 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'nuclia_vectors'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "nuclia_vectors",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'payload_index_test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=payload_index_test",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "payload_index_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'segment_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=segment_tests",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "segment_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'fail_recovery_test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=fail_recovery_test",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "fail_recovery_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'segment_builder_test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=segment_builder_test",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "segment_builder_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'filtrable_hnsw_test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=filtrable_hnsw_test",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "filtrable_hnsw_test",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'vector_search'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=vector_search",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "vector_search",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'hnsw_build_graph'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=hnsw_build_graph",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "hnsw_build_graph",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'hnsw_search_graph'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=hnsw_search_graph",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "hnsw_search_graph",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'serde_formats'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=serde_formats",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "serde_formats",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'prof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=prof",
+                    "--package=nuclia_vectors"
+                ],
+                "filter": {
+                    "name": "prof",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

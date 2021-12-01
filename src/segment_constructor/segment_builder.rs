@@ -15,6 +15,7 @@ pub struct SegmentBuilder {
     pub destination_path: PathBuf,
     pub temp_path: PathBuf,
     pub indexed_fields: HashSet<PayloadKeyType>,
+    pub read_only: bool
 }
 
 impl SegmentBuilder {
@@ -22,8 +23,9 @@ impl SegmentBuilder {
         segment_path: &Path,
         temp_dir: &Path,
         segment_config: &SegmentConfig,
+        read_only: bool
     ) -> OperationResult<Self> {
-        let segment = build_segment(temp_dir, segment_config)?;
+        let segment = build_segment(temp_dir, segment_config, read_only)?;
         let temp_path = segment.current_path.clone();
 
         let destination_path = segment_path.join(temp_path.file_name().unwrap());
@@ -33,6 +35,7 @@ impl SegmentBuilder {
             destination_path,
             temp_path,
             indexed_fields: Default::default(),
+            read_only
         })
     }
 
@@ -110,6 +113,6 @@ impl TryInto<Segment> for SegmentBuilder {
         fs::rename(&self.temp_path, &self.destination_path)
             .describe("Moving segment data after optimization")?;
 
-        load_segment(&self.destination_path)
+        load_segment(&self.destination_path, self.read_only)
     }
 }

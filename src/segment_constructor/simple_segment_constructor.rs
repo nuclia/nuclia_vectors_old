@@ -16,6 +16,7 @@ pub fn build_simple_segment(
     path: &Path,
     dim: usize,
     distance: Distance,
+    read_only: bool
 ) -> OperationResult<Segment> {
     build_segment(
         path,
@@ -26,6 +27,7 @@ pub fn build_simple_segment(
             distance,
             storage_type: Default::default(),
         },
+        read_only
     )
 }
 
@@ -39,14 +41,14 @@ mod tests {
     #[test]
     fn test_create_simple_segment() {
         let dir = TempDir::new("segment_dir").unwrap();
-        let segment = build_simple_segment(dir.path(), 100, Distance::Dot).unwrap();
+        let segment = build_simple_segment(dir.path(), 100, Distance::Dot, false).unwrap();
         eprintln!(" = {:?}", segment.version());
     }
 
     #[test]
     fn test_add_and_search() {
         let dir = TempDir::new("segment_dir").unwrap();
-        let mut segment = build_simple_segment(dir.path(), 4, Distance::Dot).unwrap();
+        let mut segment = build_simple_segment(dir.path(), 4, Distance::Dot, false).unwrap();
 
         let wrong_vec = vec![1.0, 1.0, 1.0];
 

@@ -22,7 +22,7 @@ mod tests {
         let mut segment2 = build_segment_2(dir.path());
 
         let mut builder =
-            SegmentBuilder::new(dir.path(), temp_dir.path(), &segment1.segment_config).unwrap();
+            SegmentBuilder::new(dir.path(), temp_dir.path(), &segment1.segment_config, false).unwrap();
 
         // Include overlapping with segment1 to check the
         segment2.upsert_point(100, 3, &[0., 0., 0., 0.]).unwrap();

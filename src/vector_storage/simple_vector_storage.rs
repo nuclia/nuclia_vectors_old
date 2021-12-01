@@ -2,6 +2,7 @@ use std::ops::Range;
 use std::path::Path;
 
 use log::debug;
+use rocksdb::{IteratorMode, Options, DB};
 use serde::{Deserialize, Serialize};
 
 use crate::entry::entry_point::OperationResult;
@@ -24,6 +25,7 @@ pub struct SimpleVectorStorage {
     vectors: Vec<Array1<VectorElementType>>,
     deleted: BitVec,
     deleted_count: usize,
+    store: DB,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -73,10 +75,38 @@ impl RawScorer for SimpleRawScorer<'_> {
 }
 
 impl SimpleVectorStorage {
-    pub fn open(path: &Path, dim: usize, distance: Distance) -> OperationResult<Self> {
+
+    pub fn open(path: &Path, dim: usize, distance: Distance, read_only: bool) -> OperationResult<Self> {
         let mut vectors: Vec<Array1<VectorElementType>> = vec![];
         let mut deleted = BitVec::new();
         let mut deleted_count = 0;
+
+        let mut options: Options = Options::default();
+        options.set_write_buffer_size(DB_CACHE_SIZE);
+        options.create_if_missing(true);
+
+        let store = match read_only {
+            true => DB::open_for_read_only(&options, path, false)?,
+            false => DB::open(&options, path)?,
+        };
+
+        for (key, val) in store.iterator(IteratorMode::Start) {
+            let point_id: PointOffsetType = bincode::deserialize(&key).unwrap();
+            let stored_record: StoredRecord = bincode::deserialize(&val).unwrap();
+            if stored_record.deleted {
+                deleted_count += 1;
+            }
+
+            if vectors.len() <= (point_id as usize) {
+                vectors.resize((point_id + 1) as usize, Array::zeros(dim));
+            }
+            while deleted.len() <= (point_id as usize) {
+                deleted.push(false)
+            }
+
+            deleted.set(point_id as usize, stored_record.deleted);
+            vectors[point_id as usize].assign(&Array::from(stored_record.vector));
+        }
 
         let metric = mertic_object(&distance);
 
@@ -92,7 +122,23 @@ impl SimpleVectorStorage {
             vectors,
             deleted,
             deleted_count,
+            store,
         })
+    }
+
+    fn update_stored(&self, point_id: PointOffsetType) -> OperationResult<()> {
+        let v = self.vectors.get(point_id as usize).unwrap();
+
+        let record = StoredRecord {
+            deleted: self.deleted[point_id as usize],
+            vector: v.to_vec(), // ToDo: try to reduce number of vector copies
+        };
+        self.store.put(
+            bincode::serialize(&point_id).unwrap(),
+            bincode::serialize(&record).unwrap(),
+        )?;
+
+        Ok(())
     }
 }
 
@@ -126,6 +172,7 @@ impl VectorStorage for SimpleVectorStorage {
         self.vectors.push(Array::from(vector));
         self.deleted.push(false);
         let new_id = (self.vectors.len() - 1) as PointOffsetType;
+        self.update_stored(new_id)?;
         Ok(new_id)
     }
 
@@ -135,6 +182,7 @@ impl VectorStorage for SimpleVectorStorage {
         vector: Vec<VectorElementType>,
     ) -> OperationResult<PointOffsetType> {
         self.vectors[key as usize].assign(&Array::from(vector));
+        self.update_stored(key)?;
         Ok(key)
     }
 
@@ -149,6 +197,7 @@ impl VectorStorage for SimpleVectorStorage {
             self.deleted.push(false);
             self.vectors.push(Array::from(other_vector));
             let new_id = (self.vectors.len() - 1) as PointOffsetType;
+            self.update_stored(new_id)?;
         }
         let end_index = self.vectors.len() as PointOffsetType;
         Ok(start_index..end_index)
@@ -162,6 +211,7 @@ impl VectorStorage for SimpleVectorStorage {
             self.deleted_count += 1
         }
         self.deleted.set(key as usize, true);
+        self.update_stored(key)?;
         Ok(())
     }
 
@@ -176,7 +226,7 @@ impl VectorStorage for SimpleVectorStorage {
     }
 
     fn flush(&self) -> OperationResult<()> {
-        Ok(())
+        Ok(self.store.flush()?)
     }
 
     fn raw_scorer(&self, vector: Vec<VectorElementType>) -> Box<dyn RawScorer + '_> {
@@ -265,7 +315,7 @@ mod tests {
         let dir = TempDir::new("storage_dir").unwrap();
         let distance = Distance::Dot;
         let dim = 4;
-        let mut storage = SimpleVectorStorage::open(dir.path(), dim, distance).unwrap();
+        let mut storage = SimpleVectorStorage::open(dir.path(), dim, distance, false).unwrap();
         let vec0 = vec![1.0, 0.0, 1.0, 1.0];
         let vec1 = vec![1.0, 0.0, 1.0, 0.0];
         let vec2 = vec![1.0, 1.0, 1.0, 1.0];
