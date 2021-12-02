@@ -2,7 +2,7 @@ use crate::entry::entry_point::{
     get_service_error, OperationError, OperationResult, SegmentEntry, SegmentFailedState,
 };
 use crate::id_tracker::IdTracker;
-use crate::index::{PayloadIndex, VectorIndex};
+use crate::index::{VectorIndex};
 use crate::spaces::tools::mertic_object;
 use crate::types::{
     PayloadKeyType, PayloadKeyTypeRef, PayloadSchemaInfo, PayloadType, PointIdType,

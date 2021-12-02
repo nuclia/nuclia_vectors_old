@@ -2,7 +2,7 @@ use crate::entry::entry_point::{OperationError, OperationResult};
 use crate::id_tracker::simple_id_tracker::SimpleIdTracker;
 use crate::index::hnsw_index::hnsw::HNSWIndex;
 use crate::index::plain_index::PlainIndex;
-use crate::index::{PayloadIndex, VectorIndex};
+use crate::index::{VectorIndex};
 use crate::segment::{Segment, SEGMENT_STATE_FILE};
 use crate::types::{
     Indexes, PayloadIndexType, SegmentConfig, SegmentState, SegmentType, SeqNumberType, StorageType,

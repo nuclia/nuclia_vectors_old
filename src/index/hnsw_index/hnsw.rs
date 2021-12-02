@@ -4,7 +4,7 @@ use crate::index::hnsw_index::config::HnswGraphConfig;
 use crate::index::hnsw_index::graph_layers::GraphLayers;
 use crate::index::hnsw_index::point_scorer::FilteredScorer;
 use crate::index::sample_estimation::sample_check_cardinality;
-use crate::index::{PayloadIndex, VectorIndex};
+use crate::index::{VectorIndex};
 use crate::types::Condition::Field;
 use crate::types::{
     FieldCondition, HnswConfig, PointOffsetType, SearchParams, VectorElementType,
