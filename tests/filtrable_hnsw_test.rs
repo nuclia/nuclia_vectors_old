@@ -6,7 +6,7 @@ mod tests {
     use nuclia_vectors::entry::entry_point::SegmentEntry;
     use nuclia_vectors::fixtures::payload_fixtures::{random_int_payload, random_vector};
     use nuclia_vectors::index::hnsw_index::hnsw::HNSWIndex;
-    use nuclia_vectors::index::{PayloadIndex, VectorIndex};
+    use nuclia_vectors::index::{VectorIndex};
     use nuclia_vectors::segment_constructor::build_segment;
     use nuclia_vectors::types::{
         Condition, Distance, FieldCondition, HnswConfig, Indexes, PayloadIndexType,
@@ -56,7 +56,6 @@ mod tests {
                 .upsert_point(idx as SeqNumberType, idx, &vector)
                 .unwrap();
         }
-        // let opnum = num_vectors + 1;
 
 
         let hnsw_config = HnswConfig {
@@ -74,32 +73,18 @@ mod tests {
 
         hnsw_index.build_index().unwrap();
 
-       
-        hnsw_index.build_index().unwrap();
-
         let top = 3;
         let mut hits = 0;
         let attempts = 100;
         for _i in 0..attempts {
             let query = random_vector(&mut rnd, dim);
 
-            let index_result = hnsw_index.search_with_graph(
-                &query,
-                top,
-                Some(&SearchParams { hnsw_ef: Some(ef) }),
-            );
+            let range_size = 40;
+            let left_range = rnd.gen_range(0..400);
+            let right_range = left_range + range_size;
 
-            let plain_result =
-                segment
-                    .vector_index
-                    .borrow()
-                    .search(&query, top, None);
-
-            if plain_result == index_result {
-                hits += 1;
-            }
+            
         }
-        assert!(attempts - hits < 5, "hits: {} of {}", hits, attempts); // Not more than 5% failures
         eprintln!("hits = {:#?} out of {}", hits, attempts);
     }
 }
