@@ -7,6 +7,7 @@ use crate::segment::{Segment, SEGMENT_STATE_FILE};
 use crate::types::{
     Indexes, PayloadIndexType, SegmentConfig, SegmentState, SegmentType, SeqNumberType, StorageType,
 };
+use crate::vector_storage::drive_vector_storage::DriveVectorStorage;
 use crate::vector_storage::memmap_vector_storage::MemmapVectorStorage;
 use crate::vector_storage::simple_vector_storage::SimpleVectorStorage;
 use crate::vector_storage::VectorStorage;
@@ -45,6 +46,12 @@ fn create_segment(
             config.vector_size,
             config.distance,
         )?),
+        StorageType::Drive => sp(DriveVectorStorage::open(
+            &vector_storage_path, 
+            config.vector_size, 
+            config.distance, 
+            read_only
+        )?)
     };
 
     let vector_index: Arc<AtomicRefCell<dyn VectorIndex>> = match config.index {

@@ -98,7 +98,10 @@ impl EntryPoints {
     {
         self.entry_points
             .iter()
-            .filter(|entry| checker(entry.point_id))
+            .filter(
+                |entry| 
+                    checker(entry.point_id)
+            )
             .cloned()
             .next()
             .or_else(|| {

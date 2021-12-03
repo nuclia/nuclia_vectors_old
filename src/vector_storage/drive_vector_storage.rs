@@ -101,6 +101,8 @@ impl DriveVectorStorage {
             n_keys += 1;
         }
 
+        debug!("Loaded with {} vectors", n_keys);
+
         Ok(DriveVectorStorage {
             dim,
             metric,

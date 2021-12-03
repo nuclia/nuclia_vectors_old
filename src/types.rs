@@ -190,6 +190,8 @@ pub enum StorageType {
     InMemory,
     /// Use memmap to store vectors, a little slower than `InMemory`, but requires little RAM
     Mmap,
+    /// Store all the vectors always using a persitance DB.
+    Drive,
 }
 
 impl Default for StorageType {

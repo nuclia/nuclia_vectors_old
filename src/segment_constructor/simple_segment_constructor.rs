@@ -1,6 +1,6 @@
 use crate::segment::Segment;
 
-use crate::types::{Distance, Indexes, SegmentConfig};
+use crate::types::{Distance, Indexes, SegmentConfig, StorageType};
 
 use crate::entry::entry_point::OperationResult;
 use crate::segment_constructor::build_segment;
@@ -25,7 +25,7 @@ pub fn build_simple_segment(
             index: Indexes::Plain {},
             payload_index: None,
             distance,
-            storage_type: Default::default(),
+            storage_type: StorageType::Drive,
         },
         read_only
     )
@@ -71,8 +71,6 @@ mod tests {
         segment.upsert_point(2, 3, &vec3).unwrap();
         segment.upsert_point(2, 4, &vec4).unwrap();
         segment.upsert_point(2, 5, &vec5).unwrap();
-
-        let payload_key = "color".to_string();
 
         // Replace vectors
         segment.upsert_point(4, 1, &vec1).unwrap();
