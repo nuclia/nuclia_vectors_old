@@ -45,12 +45,18 @@ impl RawScorer for DriveRawScorer<'_> {
     ) -> Box<dyn Iterator<Item = ScoredPointOffset> + 'a> {
         let res_iter = points
             .map(move |point| {
-                let other_vector = self.storage.get_vector(point).unwrap();
-                ScoredPointOffset {
-                    idx: point,
-                    score: self.metric.blas_similarity(&self.query, &Array::from(other_vector)),
+                let other_vector = self.storage.get_vector(point);
+                match  other_vector {
+                    Some(vec) => Some(ScoredPointOffset {
+                        idx: point,
+                        score: self.metric.blas_similarity(&self.query, &Array::from(vec)),
+                    }),
+                    None => None,
                 }
-            });
+                
+            })
+            .filter(|x| x.is_some())
+            .map(|x| x.unwrap());
         Box::new(res_iter)
     }
 
@@ -203,7 +209,12 @@ impl VectorStorage for DriveVectorStorage {
     }
 
     fn iter_ids(&self) -> Box<dyn Iterator<Item = PointOffsetType> + '_> {
-        let iter = 0..self.len as PointOffsetType;
+        let iter = self.store.iterator(IteratorMode::Start)
+            .map(|(point_id, _)| {
+                let point: PointOffsetType = bincode::deserialize(&point_id).unwrap();
+                point
+            });
+
         Box::new(iter)
     }
 
@@ -239,16 +250,25 @@ impl VectorStorage for DriveVectorStorage {
                 .preprocess(vector)
                 .unwrap_or_else(|| vector.to_owned()),
         );
-        let scores = points
+        let scores: Vec<_> = points
             .map(|point| {
-                let other_vector = self.get_vector(point).unwrap();
-                ScoredPointOffset {
-                    idx: point,
-                    score: self
-                        .metric
-                        .blas_similarity(&preprocessed_vector, &Array::from(other_vector)),
+                let other_vector = self.get_vector(point);
+
+                match other_vector {
+                    Some(vec) => Some(ScoredPointOffset {
+                        idx: point,
+                        score: self
+                                .metric
+                                .blas_similarity(&preprocessed_vector, &Array::from(vec)),
+                    }),
+                    None => None,
                 }
-            });
+                
+            })
+            .filter(|x| x.is_some())
+            .map(|x| x.unwrap())
+            .collect();
+
         peek_top_scores_iterable(scores, top)
     }
 
@@ -258,21 +278,24 @@ impl VectorStorage for DriveVectorStorage {
                 .preprocess(vector)
                 .unwrap_or_else(|| vector.to_owned()),
         );
+
         let scores = self
             .store
             .iterator(IteratorMode::Start)
             .map(|(point, other_vector)| {
                 
                 let point: PointOffsetType = bincode::deserialize(&point).unwrap();
-                let other_vector = self.get_vector(point).unwrap();
+                let other_vector: Vec<f32> = bincode::deserialize(&other_vector).unwrap();
 
                 ScoredPointOffset {
                     idx: point,
                     score: self
-                            .metric
-                            .blas_similarity(&preprocessed_vector, &Array::from(other_vector)),
+                        .metric
+                        .blas_similarity(&preprocessed_vector, &Array::from(other_vector)),
                 }
             });
+            
+
         peek_top_scores_iterable(scores, top)
     }
 
